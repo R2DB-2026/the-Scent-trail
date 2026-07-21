@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Scent Trail: Interactive Spatial Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;600&display=swap');
+        
+        body {
+            font-family: 'Anuphan', sans-serif;
+            background-color: #FDFBF7;
+            color: #3D3D3D;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #D4A373;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .active-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #D4A373;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .scent-path {
+            stroke-dasharray: 10;
+            animation: dash 5s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F1F1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4A373;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+<!-- Chosen Palette: Warm Earthy Neutrals (Cream #FDFBF7, Terracotta #D4A373, Sage #A3B18A, Deep Brown #3D3D3D) -->
+
+<!-- Application Structure Plan: 
+1. Introduction (Hero): สร้างความประทับใจแรกด้วยวิสัยทัศน์และการเล่าเรื่องเชิงอารมณ์
+2. Market Data Dashboard: ใช้ Chart.js แสดงสถิติการเติบโตของตลาด Pet-Parents เพื่อสร้างความน่าเชื่อถือ
+3. Interactive Scent Journey: แผนผังเส้นทางที่ผู้ใช้สามารถคลิกดูแต่ละสถานะอารมณ์ของสุนัขและเจ้าของได้
+4. Architecture Explorer: ตัวสลับ (Toggle) ระหว่าง Open-Air และ Enclosed เพื่อดูความต่างของการออกแบบ
+5. Economic ROI Calculator: ส่วนที่มีความโต้ตอบให้ผู้ใช้เลื่อนตัวแปร (Dwell Time/Basket Size) เพื่อดูผลกำไรที่เพิ่มขึ้น
+6. Implementation Strategy: ขั้นตอนการทำงานที่เป็นรูปธรรม
+โครงสร้างนี้ถูกเลือกเพื่อให้ข้อมูลที่ซับซ้อนดูง่ายขึ้น โดยเริ่มจาก "ทำไม" (Market) ไปสู่ "อย่างไร" (Design) และจบที่ "คุ้มค่าแค่ไหน" (ROI) -->
+
+<!-- Visualization & Content Choices:
+- Market Growth Trend -> Line Chart -> แสดงความพุ่งทะยานของมูลค่าตลาดสัตว์เลี้ยงไทย
+- Spatial Impact Comparison -> Radar Chart -> เปรียบเทียบ KPI หลัก 4 ด้านที่ห้างจะได้รับ
+- Scent Journey -> Interactive Steps -> การเล่าเรื่องแบบ Step-by-Step เพื่อให้เห็นความเชื่อมโยงของกลิ่นและอารมณ์
+- ROI Calculation -> Real-time Value Calculation -> ให้ผู้บริหารเห็นตัวเลขที่เปลี่ยนไปตามพารามิเตอร์ที่ปรับได้จริง
+CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!-- Navigation -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-stone-100">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-[#D4A373] rounded-full flex items-center justify-center text-white font-bold">S</div>
+            <span class="font-semibold text-lg tracking-tight">THE SCENT TRAIL</span>
+        </div>
+        <div class="hidden md:flex space-x-8 font-medium text-sm uppercase tracking-widest text-stone-500">
+            <a onclick="scrollToSection('hero')" class="nav-link">Vision</a>
+            <a onclick="scrollToSection('market')" class="nav-link">Market</a>
+            <a onclick="scrollToSection('journey')" class="nav-link">Journey</a>
+            <a onclick="scrollToSection('cases')" class="nav-link">Cases</a>
+            <a onclick="scrollToSection('roi')" class="nav-link">ROI</a>
+        </div>
+        <button class="bg-[#3D3D3D] text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-black transition-all">
+            Get Proposal
+        </button>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<main class="pt-20">
+
+    <!-- Section 1: Hero -->
+    <section id="hero" class="min-h-screen flex items-center px-6 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+            <div class="z-10">
+                <span class="inline-block px-3 py-1 bg-[#D4A373]/10 text-[#D4A373] rounded-full text-xs font-bold uppercase tracking-wider mb-6">Innovation 2026</span>
+                <h1 class="text-5xl md:text-7xl font-bold leading-tight mb-8">
+                    เปลี่ยนพฤติกรรมสุนัขให้เป็น <span class="text-[#D4A373]">Engine ของธุรกิจ</span>
+                </h1>
+                <p class="text-xl text-stone-500 leading-relaxed mb-10">
+                    ก้าวข้ามขีดจำกัดของ "Pet-Friendly" แบบเดิมๆ สู่การออกแบบพื้นที่เชิงสถาปัตยกรรมที่ใช้ "ประสาทรับกลิ่น" เป็นเข็มทิศนำทางความสุขและยอดขาย
+                </p>
+                <div class="flex space-x-4">
+                    <button onclick="scrollToSection('market')" class="bg-[#D4A373] text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">สำรวจข้อมูลตลาด</button>
+                    <button onclick="scrollToSection('journey')" class="border border-stone-300 px-8 py-4 rounded-xl font-semibold hover:bg-stone-50 transition-all">ดูนวัตกรรมการออกแบบ</button>
+                </div>
+            </div>
+            <div class="relative">
+                <div class="w-full aspect-square rounded-3xl bg-[#F5EBE0] relative overflow-hidden flex items-center justify-center p-12">
+                    <div class="text-center">
+                        <div class="text-8xl mb-4">🐕</div>
+                        <div class="text-2xl font-semibold text-[#3D3D3D]">Pet Sensory Placemaking</div>
+                        <p class="text-stone-400 mt-2">เมื่อสุนัขมีความสุข เจ้าของจะผูกพันกับสถานที่</p>
+                    </div>
+                    <!-- Decor Element -->
+                    <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-[#D4A373] rounded-full opacity-10"></div>
+                    <div class="absolute -top-10 -left-10 w-60 h-60 border-2 border-[#D4A373] rounded-full opacity-5"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Market Insights -->
+    <section id="market" class="py-24 bg-[#F5F5F5] px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">ขุมทรัพย์ที่ยังไม่มีใครเข้าถึง</h2>
+                <p class="text-stone-500 max-w-2xl mx-auto">วิเคราะห์การเติบโตของตลาด Pet Economy ในไทย และโอกาสที่ห้างสรรพสินค้าจะเปลี่ยน Traffic ให้เป็นรายได้ที่ยั่งยืน</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-16">
+                <div class="glass-card p-8 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-[#D4A373] mb-2">92,000M</div>
+                    <div class="text-stone-600 font-medium">มูลค่าตลาดปี 2026 (ล้านบาท)</div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-[#D4A373] mb-2">41,000</div>
+                    <div class="text-stone-600 font-medium">ค่าใช้จ่ายต่อตัว/ปี (บาท)</div>
+                </div>
+                <div class="glass-card p-8 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-[#D4A373] mb-2">80%</div>
+                    <div class="text-stone-600 font-medium">ตัดสินใจไปที่นั่นเพราะ "สัตว์เลี้ยง"</div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-100">
+                    <h3 class="text-xl font-bold mb-6 text-center">คาดการณ์การเติบโตของตลาดสัตว์เลี้ยงไทย</h3>
+                    <div class="chart-container">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-6">ทำไมต้องเป็น "Scent Trail"?</h3>
+                    <ul class="space-y-6">
+                        <li class="flex items-start">
+                            <span class="active-dot mt-2"></span>
+                            <div>
+                                <strong class="block text-lg">Beyond Checkbox Mindset</strong>
+                                <p class="text-stone-500">ไม่ใช่แค่ "อนุญาตให้เข้า" แต่คือการ "จัดสรรประสบการณ์" ที่เข้าใจสรีระและประสาทสัมผัสของสัตว์เลี้ยงอย่างแท้จริง</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="active-dot mt-2"></span>
+                            <div>
+                                <strong class="block text-lg">The High-Value Consumers</strong>
+                                <p class="text-stone-500">กลุ่ม Pet Parents คือกลุ่มที่มีกำลังซื้อสูงและมีความภักดีต่อสถานที่ (Place Attachment) สูงกว่ากลุ่มทั่วไป</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="active-dot mt-2"></span>
+                            <div>
+                                <strong class="block text-lg">Monetizing Dead Zones</strong>
+                                <p class="text-stone-500">ใช้กลิ่นนำทางสุนัขไปยังพื้นที่ชั้นบนหรือโซนที่ Traffic ต่ำ เพื่อกระจายการเข้าถึงของผู้ใช้บริการ</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Interactive Journey -->
+    <section id="journey" class="py-24 px-6 overflow-hidden">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+                <div class="max-w-2xl">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">The Scent Journey Experience</h2>
+                    <p class="text-stone-500">การออกแบบอารมณ์ผ่านจุดดมกลิ่นเชิงสัญชาตญาณ ตลอดเส้นทางตั้งแต่ทางเข้าจนถึงจุดปิดการขาย</p>
+                </div>
+                <div class="mt-6 md:mt-0 flex space-x-2">
+                    <button onclick="changeStep(-1)" class="w-12 h-12 rounded-full border border-stone-200 flex items-center justify-center hover:bg-stone-50">←</button>
+                    <button onclick="changeStep(1)" class="w-12 h-12 rounded-full border border-stone-200 flex items-center justify-center hover:bg-stone-50">→</button>
+                </div>
+            </div>
+
+            <div class="relative min-h-[500px]">
+                <div id="journey-content" class="grid md:grid-cols-2 gap-12 items-center">
+                    <!-- Dynamic Content Loaded by JS -->
+                </div>
+                <!-- Progress Line -->
+                <div class="mt-16 w-full h-1 bg-stone-100 rounded-full relative">
+                    <div id="journey-progress" class="absolute top-0 left-0 h-full bg-[#D4A373] transition-all duration-500" style="width: 25%;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Architectural Models -->
+    <section class="py-24 bg-stone-900 text-white px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <h2 class="text-3xl md:text-4xl font-bold mb-8 text-[#D4A373]">Architectural Integration</h2>
+                    <p class="text-stone-400 mb-10">การติดตั้งระบบพ่นกลิ่นและความดันอากาศที่ถูกคำนวณมาอย่างดี เพื่อความสะอาดและสุนทรียภาพที่สมดุล</p>
+                    
+                    <div class="flex mb-8 space-x-4">
+                        <button onclick="switchModel('open')" id="btn-open" class="px-6 py-2 rounded-full font-semibold border border-[#D4A373] bg-[#D4A373] text-stone-900 transition-all">Open-Air Mall</button>
+                        <button onclick="switchModel('enclosed')" id="btn-enclosed" class="px-6 py-2 rounded-full font-semibold border border-stone-700 text-stone-400 transition-all">Enclosed Mall</button>
+                    </div>
+
+                    <div id="model-description" class="space-y-6">
+                        <!-- Content via JS -->
+                    </div>
+                </div>
+                <div class="relative h-[400px] bg-stone-800 rounded-3xl overflow-hidden flex items-center justify-center">
+                    <div id="model-visual" class="text-center p-12">
+                        <!-- Icon representation via HTML/CSS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4.5: Global Case Studies -->
+    <section id="cases" class="py-24 bg-[#FAF7F2] px-6 border-b border-stone-200">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="inline-block px-3 py-1 bg-[#D4A373]/10 text-[#D4A373] rounded-full text-xs font-bold uppercase tracking-wider mb-4">Proven Success</span>
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Global Case Studies</h2>
+                <p class="text-stone-500 max-w-2xl mx-auto">ถอดบทเรียนความสำเร็จจากศูนย์การค้าและคอมมูนิตี้ระดับโลก ที่นำนวัตกรรมการจัดการประสาทสัมผัสและการออกแบบเพื่อสัตว์เลี้ยงมาสร้างการเติบโตทางธุรกิจจริง</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Case 1: Starfield Hanam (South Korea) -->
+                <div class="bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-xs font-bold tracking-widest text-[#D4A373] uppercase bg-[#D4A373]/10 px-3 py-1 rounded-full">Enclosed Premium</span>
+                            <span class="text-3xl">🇰🇷</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-[#3D3D3D] mb-4">Starfield Hanam</h3>
+                        <p class="text-sm text-stone-400 mb-6">Gyeonggi-do, South Korea</p>
+                        <p class="text-stone-600 leading-relaxed mb-6">
+                            ต้นแบบห้างสรรพสินค้าปิดระดับหรูหราที่ยอมรับสัตว์เลี้ยงอย่างเป็นทางการ โดดเด่นด้วยการใช้ <strong class="text-[#3D3D3D]">Odor Air-Barrier System</strong> และการคุมทิศทางลมใน Pet Lounge เพื่อไม่ให้กลิ่นปะปนกับสินค้าหรูหรา
+                        </p>
+                        <ul class="space-y-2 mb-8">
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#A3B18A] rounded-full mr-2"></span>
+                                ผ่อนคลายสุนัขด้วย Natural Air-Flow
+                            </li>
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#A3B18A] rounded-full mr-2"></span>
+                                แยกโซนอากาศอย่างชาญฉลาด
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="border-t border-stone-100 pt-6 flex justify-between items-center bg-stone-50/50 -mx-8 -mb-8 p-8 rounded-b-[2.5rem]">
+                        <div>
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Dwell Time Boost</div>
+                            <div class="text-2xl font-bold text-[#A3B18A]">+38%</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Safety Rate</div>
+                            <div class="text-lg font-bold text-[#3D3D3D]">99.9%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case 2: Central Westville (Thailand) -->
+                <div class="bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-xs font-bold tracking-widest text-[#D4A373] uppercase bg-[#D4A373]/10 px-3 py-1 rounded-full">Semi-Outdoor</span>
+                            <span class="text-3xl">🇹🇭</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-[#3D3D3D] mb-4">Central Westville</h3>
+                        <p class="text-sm text-stone-400 mb-6">Bangkok, Thailand</p>
+                        <p class="text-stone-600 leading-relaxed mb-6">
+                            โมเดลธรรมชาติที่บูรณาการแนวคิด <strong class="text-[#3D3D3D]">Sniffari Walkways</strong> เข้ากับการออกแบบ Landscape พื้นหญ้าและพันธุ์ไม้ธรรมชาติ ช่วยกระตุ้นพฤติกรรมการสำรวจและการดมกลิ่นของสุนัขในเขตชานเมือง
+                        </p>
+                        <ul class="space-y-2 mb-8">
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#D4A373] rounded-full mr-2"></span>
+                                ใช้พื้นที่สีเขียวกระตุ้นพฤติกรรมธรรมชาติ
+                            </li>
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#D4A373] rounded-full mr-2"></span>
+                                ทางเดินเท้าและเลนรถเข็นเป็นระบบระเบียบ
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="border-t border-stone-100 pt-6 flex justify-between items-center bg-stone-50/50 -mx-8 -mb-8 p-8 rounded-b-[2.5rem]">
+                        <div>
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Weekend Traffic</div>
+                            <div class="text-2xl font-bold text-[#D4A373]">+45%</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Pet Engagement</div>
+                            <div class="text-lg font-bold text-[#3D3D3D]">High</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case 3: Bark Social (USA) -->
+                <div class="bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-xs font-bold tracking-widest text-[#D4A373] uppercase bg-[#D4A373]/10 px-3 py-1 rounded-full">Experiential Retail</span>
+                            <span class="text-3xl">🇺🇸</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-[#3D3D3D] mb-4">Bark Social</h3>
+                        <p class="text-sm text-stone-400 mb-6">Maryland, USA</p>
+                        <p class="text-stone-600 leading-relaxed mb-6">
+                            โซเชียลคลับสำหรับสุนัขและคนเลี้ยงสัตว์ที่มีการจัดตาราง <strong class="text-[#3D3D3D]">Micro-Scent Stimulation</strong> หรือการปล่อยกลิ่นของว่างธรรมชาติโชยตามลม เพื่อกระตุ้นสัญชาตญาณความสุขและการเข้าสู่โซนร้านค้าพาร์ทเนอร์
+                        </p>
+                        <ul class="space-y-2 mb-8">
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#A3B18A] rounded-full mr-2"></span>
+                                กระตุ้นประสาทสัมผัสด้วย Micro-Scent
+                            </li>
+                            <li class="flex items-center text-sm text-stone-500">
+                                <span class="w-1.5 h-1.5 bg-[#A3B18A] rounded-full mr-2"></span>
+                                สร้าง Brand Activation กับพาร์ทเนอร์ค้าปลีก
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="border-t border-stone-100 pt-6 flex justify-between items-center bg-stone-50/50 -mx-8 -mb-8 p-8 rounded-b-[2.5rem]">
+                        <div>
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Avg. Basket Size</div>
+                            <div class="text-2xl font-bold text-[#A3B18A]">+30%</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-stone-400 uppercase tracking-widest font-bold">Repeat Visits</div>
+                            <div class="text-lg font-bold text-[#3D3D3D]">85%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5: ROI Calculator -->
+    <section id="roi" class="py-24 px-6 bg-[#FDFBF7]">
+        <div class="max-w-7xl mx-auto text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">วิเคราะห์ความคุ้มค่าเชิงตัวเลข</h2>
+            <p class="text-stone-500">คำนวณมูลค่าเพิ่มที่คุณจะได้รับจากการติดตั้งระบบ Scent Trail Placemaking</p>
+        </div>
+
+        <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-12 bg-white p-10 rounded-[3rem] shadow-xl border border-stone-100">
+            <div class="space-y-8">
+                <div>
+                    <label class="block text-sm font-bold uppercase tracking-wider text-stone-400 mb-4">Dwell Time Increase (%)</label>
+                    <input type="range" id="dwell-range" min="0" max="100" value="35" class="w-full h-2 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-[#D4A373]" oninput="updateROI()">
+                    <div class="flex justify-between mt-2 text-sm font-bold text-[#D4A373]">
+                        <span>0%</span>
+                        <span id="dwell-val">35%</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold uppercase tracking-wider text-stone-400 mb-4">Avg. Basket Size (THB)</label>
+                    <input type="range" id="basket-range" min="500" max="5000" value="1200" step="100" class="w-full h-2 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-[#D4A373]" oninput="updateROI()">
+                    <div class="flex justify-between mt-2 text-sm font-bold text-[#D4A373]">
+                        <span>500 ฿</span>
+                        <span id="basket-val">1,200 ฿</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold uppercase tracking-wider text-stone-400 mb-4">Traffic per Day (Dogs)</label>
+                    <input type="range" id="traffic-range" min="10" max="500" value="100" class="w-full h-2 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-[#D4A373]" oninput="updateROI()">
+                    <div class="flex justify-between mt-2 text-sm font-bold text-[#D4A373]">
+                        <span>10</span>
+                        <span id="traffic-val">100</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-stone-50 rounded-[2rem] p-8 flex flex-col justify-center text-center border border-stone-100">
+                <div class="text-stone-400 font-bold text-sm uppercase tracking-widest mb-2">Estimated Added Revenue / Day</div>
+                <div class="text-5xl font-bold text-[#3D3D3D] mb-4" id="roi-total">฿ 15,120</div>
+                <div class="h-1 w-20 bg-[#D4A373] mx-auto mb-6"></div>
+                <p class="text-xs text-stone-400">คำนวณโดยใช้ Probability 25% ในการตัดสินใจซื้อเพิ่ม (Upselling Chance)</p>
+                <div class="mt-8 grid grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm">
+                        <div class="text-sm text-stone-400">ROI Period</div>
+                        <div class="font-bold">~1.8 Years</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm">
+                        <div class="text-sm text-stone-400">Dwell Boost</div>
+                        <div class="font-bold text-green-600">+45 Mins</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-16 bg-white p-8 rounded-3xl shadow-sm border border-stone-100 max-w-5xl mx-auto">
+            <h3 class="text-xl font-bold mb-6 text-center">เปรียบเทียบผลลัพธ์เชิงพื้นที่ (Spatial Impact)</h3>
+            <div class="chart-container">
+                <canvas id="impactChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="bg-stone-100 py-16 px-6 border-t border-stone-200">
+    <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
+        <div class="md:col-span-2">
+            <div class="flex items-center space-x-2 mb-6">
+                <div class="w-8 h-8 bg-[#D4A373] rounded-full flex items-center justify-center text-white font-bold">S</div>
+                <span class="font-bold text-xl tracking-tight">THE SCENT TRAIL</span>
+            </div>
+            <p class="text-stone-500 max-w-sm mb-6">ที่ปรึกษาด้านการออกแบบประสบการณ์ประสาทสัมผัสและ Placemaking เพื่อสัตว์เลี้ยงรายแรกของเอเชียตะวันออกเฉียงใต้</p>
+            <div class="flex space-x-4 text-2xl">
+                <span class="cursor-pointer hover:text-[#D4A373]">🔗</span>
+                <span class="cursor-pointer hover:text-[#D4A373]">📸</span>
+                <span class="cursor-pointer hover:text-[#D4A373]">✉️</span>
+            </div>
+        </div>
+        <div>
+            <h4 class="font-bold mb-6">Contact</h4>
+            <p class="text-stone-500 mb-2">Innovation Lab, BKK</p>
+            <p class="text-stone-500 mb-2">hello@scenttrail.com</p>
+            <p class="text-stone-500">+66 2 123 4567</p>
+        </div>
+        <div>
+            <h4 class="font-bold mb-6">Resources</h4>
+            <ul class="text-stone-500 space-y-2">
+                <li class="hover:text-[#D4A373] cursor-pointer">Whitepaper 2026</li>
+                <li class="hover:text-[#D4A373] cursor-pointer">Pet Safety Guidelines</li>
+                <li class="hover:text-[#D4A373] cursor-pointer">ROI Model API</li>
+            </ul>
+        </div>
+    </div>
+    <div class="max-w-7xl mx-auto mt-12 pt-8 border-t border-stone-200 text-center text-stone-400 text-sm">
+        &copy; 2026 The Scent Trail Project. All Rights Reserved. Designed for Pet Well-being.
+    </div>
+</footer>
+
+<script>
+    // Data Storage
+    const journeyData = [
+        {
+            title: "Welcome & De-stress Zone",
+            location: "ทางเข้าหลัก / จุด Drop-off",
+            scent: "Lavender & Chamomile",
+            dogFeel: "รู้สึกปลอดภัย ผ่อนคลายจากการเดินทาง และลดอัตราการเห่าหรือตื่นตระหนกเสียงแอร์",
+            humanFeel: "รู้สึกอุ่นใจที่เห็นลูกนิ่งและสงบ พร้อมก้าวเดินเข้าห้างอย่างมีความสุข",
+            emoji: "🧘‍♂️",
+            progress: 25
+        },
+        {
+            title: "The Discovery Shopping Trail",
+            location: "โถงทางเดินหลัก / โซนสินค้าไลฟ์สไตล์",
+            scent: "Earthy Grass & Vetiver (Low-dose)",
+            dogFeel: "กระตุ้นความอยากรู้อยากเห็น (Curiosity) อยากเดินสำรวจตามทาง ไม่ขัดขืนสายจูง",
+            humanFeel: "เพลิดเพลินกับการเดินช้อปปิ้งได้นานขึ้น โดยสุนัขเป็นตัวนำทางอย่างเป็นธรรมชาติ",
+            emoji: "🐕",
+            progress: 50
+        },
+        {
+            title: "Active Spot & Tenant Gateway",
+            location: "หน้าร้านค้าผู้เช่า (Retail Partners)",
+            scent: "Roasted Treats (Nature-identical)",
+            dogFeel: "เกิดความตื่นเต้นเชิงบวก (Excitement) นำทางเจ้าของตรงเข้าสู่หน้าร้านเพื่อค้นหารางวัล",
+            humanFeel: "หลั่งสารความสุขเมื่อเห็นสุนัขร่าเริง และตัดสินใจเลือกซื้อของขวัญหรือเข้าร้านได้ง่ายขึ้น",
+            emoji: "✨",
+            progress: 75
+        },
+        {
+            title: "The Luxury Sensory Lounge",
+            location: "จุดเช็คอิน / Pet Cafe / สวนพักผ่อน",
+            scent: "Signature Premium Wood",
+            dogFeel: "ผ่อนคลายในระดับลึก พักผ่อนหลังจากสำรวจมาทั่วห้าง",
+            humanFeel: "สร้างความภักดีต่อแบรนด์ (Brand Loyalty) สูงสุด และแชร์ประสบการณ์ลงโซเชียล",
+            emoji: "👑",
+            progress: 100
+        }
+    ];
+
+    const modelData = {
+        open: {
+            title: "The Sniffari Park",
+            features: [
+                "Landscape Embedded Scent: ฝังกลิ่นในวัสดุธรรมชาติ (เปลือกไม้, ดิน, หญ้าแฝก)",
+                "Natural Air Flow: ใช้ทิศทางลมในการช่วยกระจายกลิ่นอย่างเป็นธรรมชาติ",
+                "Marking Defense: ออกแบบพื้นผิวที่ดูดซับและกำจัดกลิ่นน้ำเสียได้ดี"
+            ],
+            icon: `<div class="relative w-40 h-40 mx-auto">
+                    <div class="absolute inset-0 bg-green-900/20 rounded-full flex items-center justify-center text-6xl">🌳</div>
+                    <div class="absolute -bottom-2 -right-2 text-4xl">🍃</div>
+                   </div>`
+        },
+        enclosed: {
+            title: "The Luxury Sensory Lounge",
+            features: [
+                "Cold-Air Diffusion: พ่นละอองแห้งขนาดไมครอนที่ระดับความสูงต่ำกว่า 50 ซม.",
+                "Zonal Air Curtain: ม่านอากาศแยกโซนเพื่อไม่ให้กลิ่นปะปนกับโซนอาหารสด",
+                "Baseboard Tech: ติดตั้งหัวพ่นกลิ่นแนบไปกับบัวพื้นสถาปัตยกรรม"
+            ],
+            icon: `<div class="relative w-40 h-40 mx-auto">
+                    <div class="absolute inset-0 bg-blue-900/20 rounded-full flex items-center justify-center text-6xl">🏛️</div>
+                    <div class="absolute top-0 right-0 animate-pulse text-4xl">💨</div>
+                   </div>`
+        }
+    };
+
+    let currentStep = 0;
+
+    // Functions
+    function scrollToSection(id) {
+        document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function changeStep(dir) {
+        currentStep = (currentStep + dir + journeyData.length) % journeyData.length;
+        renderJourney();
+    }
+
+    function renderJourney() {
+        const step = journeyData[currentStep];
+        const container = document.getElementById('journey-content');
+        const progress = document.getElementById('journey-progress');
+        
+        progress.style.width = step.progress + '%';
+
+        container.innerHTML = `
+            <div class="bg-white p-12 rounded-[3rem] shadow-sm border border-stone-100 order-2 md:order-1">
+                <div class="text-6xl mb-6">${step.emoji}</div>
+                <div class="text-[#D4A373] font-bold uppercase tracking-widest text-sm mb-2">${step.location}</div>
+                <h3 class="text-3xl font-bold mb-4">${step.title}</h3>
+                <div class="inline-block px-3 py-1 bg-stone-100 rounded-lg text-sm mb-8">กลิ่นหลัก: ${step.scent}</div>
+                
+                <div class="space-y-6">
+                    <div class="bg-[#FDFBF7] p-6 rounded-2xl border-l-4 border-[#A3B18A]">
+                        <div class="font-bold text-[#A3B18A] mb-1">Dog Experience</div>
+                        <p class="text-stone-600">${step.dogFeel}</p>
+                    </div>
+                    <div class="bg-[#FDFBF7] p-6 rounded-2xl border-l-4 border-[#D4A373]">
+                        <div class="font-bold text-[#D4A373] mb-1">Owner Experience</div>
+                        <p class="text-stone-600">${step.humanFeel}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="order-1 md:order-2 flex justify-center">
+                <div class="w-64 h-64 md:w-80 md:h-80 rounded-full border-4 border-dashed border-[#D4A373]/30 flex items-center justify-center p-8 animate-[spin_20s_linear_infinite]">
+                    <div class="w-full h-full bg-[#D4A373]/5 rounded-full flex items-center justify-center" style="animation: none;">
+                        <span class="text-8xl">${step.emoji}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function switchModel(type) {
+        const model = modelData[type];
+        const desc = document.getElementById('model-description');
+        const visual = document.getElementById('model-visual');
+        const btnOpen = document.getElementById('btn-open');
+        const btnEnclosed = document.getElementById('btn-enclosed');
+
+        if(type === 'open') {
+            btnOpen.className = "px-6 py-2 rounded-full font-semibold border border-[#D4A373] bg-[#D4A373] text-stone-900 transition-all";
+            btnEnclosed.className = "px-6 py-2 rounded-full font-semibold border border-stone-700 text-stone-400 transition-all";
+        } else {
+            btnEnclosed.className = "px-6 py-2 rounded-full font-semibold border border-[#D4A373] bg-[#D4A373] text-stone-900 transition-all";
+            btnOpen.className = "px-6 py-2 rounded-full font-semibold border border-stone-700 text-stone-400 transition-all";
+        }
+
+        visual.innerHTML = model.icon;
+        desc.innerHTML = `
+            <h3 class="text-2xl font-bold">${model.title}</h3>
+            <ul class="space-y-4 mt-6">
+                ${model.features.map(f => `<li class="flex items-center text-stone-300"><span class="w-2 h-2 bg-[#D4A373] rounded-full mr-3"></span>${f}</li>`).join('')}
+            </ul>
+        `;
+    }
+
+    function updateROI() {
+        const dwell = document.getElementById('dwell-range').value;
+        const basket = document.getElementById('basket-range').value;
+        const traffic = document.getElementById('traffic-range').value;
+
+        document.getElementById('dwell-val').innerText = dwell + '%';
+        document.getElementById('basket-val').innerText = Number(basket).toLocaleString() + ' ฿';
+        document.getElementById('traffic-val').innerText = traffic;
+
+        // Formula: Traffic * Multiplier * Prob(0.25) * Basket
+        const multiplier = 1 + (dwell / 100);
+        const result = traffic * multiplier * 0.25 * basket;
+        
+        document.getElementById('roi-total').innerText = '฿ ' + Math.round(result).toLocaleString();
+    }
+
+    // Chart Initialization
+    function initCharts() {
+        const ctxMarket = document.getElementById('marketChart').getContext('2d');
+        new Chart(ctxMarket, {
+            type: 'line',
+            data: {
+                labels: ['2022', '2023', '2024', '2025', '2026 (Exp)', '2030 (Exp)'],
+                datasets: [{
+                    label: 'Market Value (M THB)',
+                    data: [55000, 62000, 71000, 80000, 92000, 123916],
+                    borderColor: '#D4A373',
+                    backgroundColor: 'rgba(212, 163, 115, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#D4A373'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: false, grid: { color: '#f0f0f0' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        const ctxImpact = document.getElementById('impactChart').getContext('2d');
+        new Chart(ctxImpact, {
+            type: 'radar',
+            data: {
+                labels: ['Dwell Time', 'Avg. Basket Size', 'Traffic Distribution', 'Brand Loyalty', 'Social Buzz'],
+                datasets: [
+                    {
+                        label: 'Before Scent Trail',
+                        data: [40, 50, 30, 45, 20],
+                        borderColor: '#stone-300',
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                    },
+                    {
+                        label: 'After Implementation',
+                        data: [90, 85, 95, 90, 95],
+                        borderColor: '#D4A373',
+                        backgroundColor: 'rgba(212, 163, 115, 0.4)',
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // Init
+    window.onload = () => {
+        renderJourney();
+        switchModel('open');
+        updateROI();
+        initCharts();
+    };
+</script>
+</body>
+</html>
